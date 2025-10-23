@@ -1,9 +1,9 @@
-import re
-
 from random import choice
 from requests import Session
 from time import sleep
 from bs4 import BeautifulSoup, ResultSet
+
+from services.url.url_service import UrlService
 
 class Scraper:
     def __init__(self):
@@ -20,6 +20,7 @@ class Scraper:
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36",
         ]
+        self.url_service = None
 
     def request_page(self, url:str) -> BeautifulSoup:
         sleep(1)

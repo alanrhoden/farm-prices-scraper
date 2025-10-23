@@ -34,6 +34,12 @@ LANDUSES_KEYWORDS = {
     ]
 }
 
+class Property:
+    def __init__(
+        
+    ):
+        pass
+
 class Classifier:
     def __get_area_from_description(self, description:str) -> float:
         pattern = r"(\d[\d.,]*)(?:\s*)(?<!\w)(m|m²|m2|km2|km²|hectares|hect|ha|há|alqueire|alq|alqueires)\b"
