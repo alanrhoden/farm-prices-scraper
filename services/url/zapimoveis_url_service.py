@@ -1,4 +1,4 @@
-from services.url.urls_service import UrlService
+from services.url.url_service import UrlService
 
 class ZapImoveisUrlService(UrlService):
     def __init__(self):

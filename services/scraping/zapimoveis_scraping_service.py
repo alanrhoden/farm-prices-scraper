@@ -1,11 +1,14 @@
 from bs4 import BeautifulSoup
+from pandas import DataFrame
 
 from services.scraping.scraping_service import Scraper
+from services.url.zapimoveis_url_service import ZapImoveisUrlService
 from css_selectors.zapimoveis_selectors import *
 
 class ZapImoveisScraper(Scraper):
     def __init__(self):
         super().__init__()
+        self.url_service = ZapImoveisUrlService()
 
     def _get_number_of_properties(self, base_url:str) -> int:
         page = self.request_page(base_url)
@@ -21,7 +24,7 @@ class ZapImoveisScraper(Scraper):
         
         return num_of_pages
     
-    def get_ads(self, urls:list) -> list:
+    def get_ad_links(self, urls:list) -> list:
         ads = []
 
         for u in urls:
@@ -66,17 +69,23 @@ class ZapImoveisScraper(Scraper):
         price, price_per_ha = self._get_price(page)
         description = self._get_text(page, DESCRIPTION)
         results = {
-            "url": ad_url,
+            "city": "",
+            "state": "",
+            "price": price,
             "area": area,
-            "total_price": price,
-            # "price_per_ha": price_per_ha
-            "description": description
+            "description": description,
+            "ad_date": "",
+            "url": ad_url
         }
 
         return results
     
-    def run(self):
-        pass
+    def run(self, city:str, state:str) -> DataFrame:
+        base_url = self.url_service.base_url(city, state)
+        num_of_pages = self.get_number_of_pages(base_url)
+        urls = self.url_service.build_urls(base_url, num_of_pages)
+        ad_urls = self.get_ad_links(urls)
+        print(ad_urls)
 
 
 if __name__ == "__main__":
