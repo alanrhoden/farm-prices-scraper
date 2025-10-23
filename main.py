@@ -8,4 +8,7 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 city, state = "Correntina", "Bahia"
 
 zap_scraper = ZapImoveisScraper()
-zap_scraper.run(city, state)
+res = zap_scraper.run(city, state)
+
+for ad in res:
+    ad.update_data_by_description()

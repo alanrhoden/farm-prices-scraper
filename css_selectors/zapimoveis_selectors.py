@@ -8,5 +8,7 @@ PROPERTY_PRICE = "body > div.base-page-default-content__content-container.bg-neu
 
 DESCRIPTION = "body > div.base-page-default-content__content-container.bg-neutral-80 > div.base-page-default-content__main-content.base-page-default-content__spacing-container > div.base-page-default-content__main-content__left > div:nth-child(5) > div > section > div.text-collapse > div > div > p"
 
+AD_DATE = "body > div.base-page-default-content__content-container.bg-neutral-80 > div.base-page-default-content__main-content.base-page-default-content__spacing-container > div.base-page-default-content__main-content__left > div:nth-child(5) > div > section > div.description__info-date.big-space > span.l-text.l-u-color-neutral-44.l-text--variant-body-regular.l-text--weight-regular.description__created-at"
+
 if __name__ == "__main__":
     pass

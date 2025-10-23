@@ -1,7 +1,8 @@
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
-from services.scraping.scraping_service import Scraper
+from services.advertising.advertising import Advertising
+from services.scraping.scraper import Scraper
 from services.url.zapimoveis_url_service import ZapImoveisUrlService
 from css_selectors.zapimoveis_selectors import *
 
@@ -55,37 +56,48 @@ class ZapImoveisScraper(Scraper):
     def _get_price(self, page:BeautifulSoup) -> float | None:
         price = self._get_text(page, PROPERTY_PRICE)
         if not price:
-            return None, None
+            return None
         price = price.replace("R$ ", "")
         price = price.replace(".", "")
         price = float(price)
-        price_per_ha = price / 10000
         
-        return price, price_per_ha
+        return price
 
-    def get_ad_info(self, ad_url: str) -> dict:
+    def _get_description(self, page:BeautifulSoup) -> str | None:
+        description = self._get_text(page, DESCRIPTION)
+        if not description:
+            return None
+        return description
+
+    def _get_ad_date(self, page:BeautifulSoup) -> str | None:
+        ad_date = self._get_text(page, AD_DATE)
+        if not ad_date:
+            return None
+        return ad_date
+
+    def get_ad(self, ad_url:str, city:str, state:str) -> Advertising:
         page = self.request_page(ad_url)
         area = self._get_area(page)
-        price, price_per_ha = self._get_price(page)
-        description = self._get_text(page, DESCRIPTION)
-        results = {
-            "city": "",
-            "state": "",
-            "price": price,
-            "area": area,
-            "description": description,
-            "ad_date": "",
-            "url": ad_url
-        }
+        price = self._get_price(page)
+        description = self._get_description(page)
+        ad_date = self._get_ad_date(page)
 
-        return results
+        ad = Advertising(city, state, price, area, description, ad_date, ad_url)
+
+        return ad
     
-    def run(self, city:str, state:str) -> DataFrame:
+    def run(self, city:str, state:str) -> dict:
         base_url = self.url_service.base_url(city, state)
         num_of_pages = self.get_number_of_pages(base_url)
         urls = self.url_service.build_urls(base_url, num_of_pages)
         ad_urls = self.get_ad_links(urls)
-        print(ad_urls)
+        ads = []
+
+        for url in ad_urls:
+            ad = self.get_ad(url, city, state)
+            ads.append(ad)
+
+        return ads
 
 
 if __name__ == "__main__":

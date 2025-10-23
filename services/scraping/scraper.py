@@ -1,4 +1,4 @@
-from random import choice
+from random import choice, randint
 from requests import Session
 from time import sleep
 from bs4 import BeautifulSoup, ResultSet
@@ -23,7 +23,7 @@ class Scraper:
         self.url_service = None
 
     def request_page(self, url:str) -> BeautifulSoup:
-        sleep(1)
+        sleep(randint(1,3))
         headers = self.headers.copy()
         headers["User-Agent"] = choice(self.user_agents)
         page = Session().get(url, headers=headers, verify=False)
