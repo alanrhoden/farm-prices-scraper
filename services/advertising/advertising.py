@@ -1,28 +1,53 @@
 import re
 
+from uuid import uuid4
+
 class Advertising:
     def __init__(
         self,
+        ad_code: str,
         city: str,
         state: str,
-        price: str,
         area: str,
+        price: str,
         description: str,
         ad_date: str,
         url: str
     ):
+        self.id = str(uuid4())
+        self.ad_code = ad_code
         self.city = city
         self.state = state
-        self.price = price
         self.area = area
+        self.price = price
         self.price_per_ha = None
         self.description = description
+        self.description_price = None
+        self.landuses = None
         self.ad_date = ad_date
         self.url = url
-        self.landuses = None
 
-    def _get_landuses_from_description(self) -> None:
-        if not self.description:
+    def __repr__(self):
+        text = f"""
+        Advertising {self.id}:
+            Advertising code: {self.ad_code}
+            City: {self.city.capitalize()}, {self.state.capitalize()}
+            Price: R$ {self.price:.2f}
+            Area: {self.area:.2f} ha
+            Description price: R$ {self.description_price}
+            Landuses: {self.landuses}
+            Url: {self.url}
+        """
+
+        return text.strip()
+
+
+class AdvertisingParser:
+    def __init__(self):
+        pass
+
+    def _get_landuses_from_description(self, description:str) -> dict|None:
+        if not description:
             return None
         
         keywords = {
@@ -68,7 +93,7 @@ class Advertising:
         }
 
         landuses = {}
-        desc = self.description.lower()
+        desc = description.lower()
 
         for lulc, kw_list in keywords.items():
             for word in kw_list:
@@ -77,36 +102,14 @@ class Advertising:
         
         return landuses if landuses else None
         
-    def _get_area_from_description(self) -> float:
-        pattern = r"(\d[\d.,]*)(?:\s*)(?<!\w)(m|m²|m2|km2|km²|hectares|hect|ha|há|alqueire|alq|alqueires)\b"
-        matches = re.findall(pattern, self.description, re.IGNORECASE)
-        max_area = 0
-
-        for match in matches:
-            number_str = match[0].replace(".", "").replace(",", ".")
-            number = float(number_str)
-            unit = match[1].lower()
-
-            if unit in ["hectares", "hect", "ha", "há"]:
-                number *= 10000
-            elif unit in ["km2", "km²"]:
-                number *= 1000000
-            elif unit in ["alqueire", "alq", "alqueires"]:
-                number *= 24200
-
-            if number > max_area:
-                max_area = number
-
-        return max_area
-    
-    def _get_price_from_description(self) -> float | None:
-        if not self.description:
+    def _get_price_from_description(self, description:str) -> float|None:
+        if not description:
             return None
 
-        desc = self.description.lower()
+        desc = description.lower()
         prices: list[float] = []
 
-        def parse_number(num_str: str) -> float | None:
+        def parse_number(num_str: str) -> float|None:
             s = num_str.strip()
             # handle both thousands '.' and decimal ','
             if '.' in s and ',' in s:
@@ -150,21 +153,110 @@ class Advertising:
         # choose the largest detected price (most likely the total property price)
         return max(prices)
 
-    def update_data_by_description(self):
-        area = self._get_area_from_description()
-        price = self._get_price_from_description()
-        landuses = self._get_landuses_from_description()
+    def __get_area_from_description(self, description: str) -> float | None:
+        if not description:
+            return None
 
-        if area == self.area:
-            print("Ad area matches description.")
-        else:
-            print("Ad area doesnt match description.")
-            print(f"\tAd area: {self.area}")
-            print(f"\tDescription area: {area}")
+        desc = description.lower()
 
-        if price == self.price:
-            print("Ad price matches description.")
-        else:
-            print("Ad price doesnt match descrption.")
-            print(f"\tAd price: {self.price}")
-            print(f"\tDescription price: {price}")
+        pattern = r"""
+            (?P<num>\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|\d+(?:[.,]\d+)?)   # number with possible thousand separators
+            (?:\s*(?P<scale>milhões|milhao|milhoes|milhão|mi|mil))?   # optional scale word (mil, milhão)
+            (?:\s*(?:a|–|-)\s*(?P<num2>\d{1,3}(?:[.\s]\d{3})*(?:,\d+)?|\d+(?:[.,]\d+)?))?  # optional range second number
+            \s*
+            (?P<unit>m2|m²|m 2|m ²|m\b|km2|km²|km 2|ha|hectares|héctares|hect|HECT|alqueire|alqueires|alq)\b
+        """
+
+        def norm_number(s: str) -> float:
+            s = s.strip().replace(" ", "")
+            # If both '.' and ',' present -> '.' is thousands, ',' is decimal
+            if "." in s and "," in s:
+                s = s.replace(".", "").replace(",", ".")
+            else:  # otherwise remove thousands-sep dots and convert comma decimal to dot
+                s = s.replace(".", "").replace(",", ".")
+            return float(s)
+
+        matches = re.finditer(pattern, desc, flags=re.IGNORECASE | re.VERBOSE)
+        max_area_ha = 0.0
+
+        for m in matches:
+            try:
+                n1 = norm_number(m.group("num"))
+            except Exception:
+                continue
+
+            # if there's a range, take the larger number
+            if m.group("num2"):
+                try:
+                    n2 = norm_number(m.group("num2"))
+                    n = max(n1, n2)
+                except Exception:
+                    n = n1
+            else:
+                n = n1
+
+            scale = m.group("scale") or ""
+            if scale:
+                scale = scale.replace("ã", "a")
+                if scale.startswith("milhao") or scale in ("milhoes", "mi"):
+                    n *= 1_000_000
+                elif scale in ("mil", "m"):
+                    n *= 1_000
+
+            unit = (m.group("unit") or "").lower().replace(" ", "")
+            # convert to hectares
+            if unit in ("m2", "m²", "m", "m2", "m 2", "m ²"):
+                # number given in square meters
+                area_ha = n / 10000.0
+            elif unit.startswith("km"):
+                # km² -> 1 km² = 100 ha
+                area_ha = n * 100.0
+            elif unit.startswith("hect") or unit in ("ha", "há"):
+                area_ha = n
+            elif unit in ("alqueire", "alqueires", "alq"):
+                # approximate: 1 alqueire ≈ 2.42 ha (adjust if you need a different region's value)
+                area_ha = n * 2.42
+            else:
+                continue
+
+            if area_ha > max_area_ha:
+                max_area_ha = area_ha
+
+        return max_area_ha if max_area_ha > 0 else None
+
+    def _rectify_area(self, ad:Advertising) -> float:
+        desc_area = self.__get_area_from_description(ad.description)
+
+        if desc_area is None:
+            return ad.area
+        
+        if ad.area is None:
+            return desc_area
+
+        max_area = max(ad.area, desc_area)
+
+        return max_area
+
+    def _rectify_price(self, ad:Advertising) -> float:
+        pass
+
+    def parse(self, ad_data:dict):
+        ad = Advertising(
+            ad_data["ad_code"],
+            ad_data["city"],
+            ad_data["state"],
+            ad_data["area"],
+            ad_data["price"],
+            ad_data["description"],
+            ad_data["ad_date"],
+            ad_data["url"]
+        )
+
+        desc_price = self._get_price_from_description(ad.description)
+
+        ad.landuses = self._get_landuses_from_description(ad.description)
+        ad.area = self._rectify_area(ad)
+        ad.description_price = desc_price
+
+        return ad
+

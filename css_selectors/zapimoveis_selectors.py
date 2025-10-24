@@ -10,5 +10,7 @@ DESCRIPTION = "body > div.base-page-default-content__content-container.bg-neutra
 
 AD_DATE = "body > div.base-page-default-content__content-container.bg-neutral-80 > div.base-page-default-content__main-content.base-page-default-content__spacing-container > div.base-page-default-content__main-content__left > div:nth-child(5) > div > section > div.description__info-date.big-space > span.l-text.l-u-color-neutral-44.l-text--variant-body-regular.l-text--weight-regular.description__created-at"
 
+PROPERTY_CODES = "body > div.base-page-default-content__content-container.bg-neutral-80 > div.base-page-default-content__main-content.base-page-default-content__spacing-container > div.base-page-default-content__main-content__left > div:nth-child(5) > div > section > div.stack.small.column > p"
+
 if __name__ == "__main__":
     pass
