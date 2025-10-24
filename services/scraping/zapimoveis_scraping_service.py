@@ -1,7 +1,7 @@
 from bs4 import BeautifulSoup
 from pandas import DataFrame
 
-from services.advertising.advertising import Advertising
+from services.advertising.advertising import Advertising, AdvertisingParser
 from services.scraping.scraper import Scraper
 from services.url.zapimoveis_url_service import ZapImoveisUrlService
 from css_selectors.zapimoveis_selectors import *
@@ -10,6 +10,7 @@ class ZapImoveisScraper(Scraper):
     def __init__(self):
         super().__init__()
         self.url_service = ZapImoveisUrlService()
+        self.ad_parser = AdvertisingParser()
 
     def _get_number_of_properties(self, base_url:str) -> int:
         page = self.request_page(base_url)
@@ -43,7 +44,7 @@ class ZapImoveisScraper(Scraper):
         
         return ads
     
-    def _get_area(self, page:BeautifulSoup) -> float | None:
+    def _get_area(self, page:BeautifulSoup) -> float|None:
         area = self._get_text(page, PROPERTY_AREA)
         if not area:
             return None
@@ -53,36 +54,61 @@ class ZapImoveisScraper(Scraper):
 
         return area
     
-    def _get_price(self, page:BeautifulSoup) -> float | None:
+    def _get_price(self, page:BeautifulSoup) -> float|None:
         price = self._get_text(page, PROPERTY_PRICE)
         if not price:
             return None
+        
         price = price.replace("R$ ", "")
         price = price.replace(".", "")
         price = float(price)
         
         return price
 
-    def _get_description(self, page:BeautifulSoup) -> str | None:
+    def _get_description(self, page:BeautifulSoup) -> str|None:
         description = self._get_text(page, DESCRIPTION)
         if not description:
             return None
+        
         return description
 
-    def _get_ad_date(self, page:BeautifulSoup) -> str | None:
+    def _get_ad_date(self, page:BeautifulSoup) -> str|None:
         ad_date = self._get_text(page, AD_DATE)
         if not ad_date:
             return None
+        
         return ad_date
 
-    def get_ad(self, ad_url:str, city:str, state:str) -> Advertising:
-        page = self.request_page(ad_url)
+    def _get_ad_code(self, page:BeautifulSoup) -> str|None:
+        codes = self._get_text(page, PROPERTY_CODES)
+        if not codes:
+            return None
+        
+        ad_code = codes.split(" ")[-1]
+        ad_code = ad_code.replace(")", "")
+        
+        return ad_code
+
+    def get_ad(self, url:str, city:str, state:str) -> Advertising:
+        page = self.request_page(url)
+        ad_code = self._get_ad_code(page)
         area = self._get_area(page)
         price = self._get_price(page)
         description = self._get_description(page)
         ad_date = self._get_ad_date(page)
 
-        ad = Advertising(city, state, price, area, description, ad_date, ad_url)
+        ad_data = {
+            "ad_code": ad_code,
+            "city": city,
+            "state": state,
+            "area": area,
+            "price": price,
+            "description": description,
+            "ad_date": ad_date,
+            "url": url
+        }
+
+        ad = self.ad_parser.parse(ad_data)
 
         return ad
     

@@ -20,7 +20,7 @@ class Scraper:
             "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.3 Safari/605.1.15",
             "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/88.0.4324.96 Safari/537.36",
         ]
-        self.url_service = None
+        self.url_service = UrlService()
 
     def request_page(self, url:str) -> BeautifulSoup:
         sleep(randint(1,3))
@@ -33,16 +33,20 @@ class Scraper:
 
     def _safe_select(self, page:BeautifulSoup, selector:str) -> ResultSet | None:
         element = page.select(selector)
+
         if not element:
-            print(f"Unable to find element:\n\t{selector}")
+            print(f"Unable to select element:\n\t{selector}")
             return None
         
         return element
 
     def _get_text(self, page:BeautifulSoup, selector:str) -> str | None:
         element = self._safe_select(page, selector)
+
         if not element:
+            print(f"Unable to get text from element:\n\t{selector}")
             return None
+        
         text = element[0].text
 
         return text
